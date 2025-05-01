@@ -76,7 +76,21 @@ const MarkdownComponents = {
 };
 
 const enhanceImportantInfo = (content: string): string => {
-  let enhancedContent = content.replace(
+  // First, clean up any malformed asterisks or double asterisks in the original content
+  let enhancedContent = content
+    .replace(/\*\*\*\*/g, '**')
+    .replace(/\*\*\s*\*\*/g, '**');
+
+  // Fix colored role titles with incorrect bold formatting
+  enhancedContent = enhancedContent.replace(
+    /<span[^>]*>(President|Program Head|Academic Head|Administrative Assistant|Compliance Officer)<\/span>:\s*\*\*\s*(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Atty\.)/gi,
+    (match) => {
+      return match.replace(/\*\*\s*/, '');
+    }
+  );
+
+  // Convert URLs to markdown links
+  enhancedContent = enhancedContent.replace(
     /(?<!\[)(?<!\()(https?:\/\/[^\s]+)(?!\))/g,
     (match: string) => {
       let displayText = match.replace(/^https?:\/\/(www\.)?/, '');
@@ -94,61 +108,83 @@ const enhanceImportantInfo = (content: string): string => {
     (match: string, _username: string) => `[${match}](https://${match})`
   );
 
-  // Now apply formatting for important information
-  const patterns = [
-    {
-      regex: /(Telephone|Mobile|Phone):\s*([\d\s\-\/\(\)]+)/g,
-      replace: (_match: string, label: string, number: string) =>
-        `${label}: [${number}](tel:${number.replace(/[\s\-\(\)]/g, '')})`,
-    },
+  // Fix administrative staff formatting - specific pattern from screenshot
+  enhancedContent = enhancedContent.replace(
+    /President:\s*\*\*\s*Mr\.\s*Antonio\s*M\.\s*del\s*Carmen\*\*/gi,
+    '**President**: **Mr. Antonio M. del Carmen**'
+  );
 
-    {
-      regex:
-        /(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)\s+([A-Z][a-zA-Z]+\s+[A-Z]\.\s+[A-Z][a-zA-Z]+)/g,
-      replace: (match: string) => `**${match}**`,
-    },
+  enhancedContent = enhancedContent.replace(
+    /Program\s*Head:\s*\*\*\s*Dr\.\s*Alonzo\s*Iñiguez\*\*/gi,
+    '**Program Head**: **Dr. Alonzo Iñiguez**'
+  );
 
-    {
-      regex:
-        /(President|Head|Dean|Director|Officer|Assistant|Coordinator)(\s+of\s+[\w\s]+)?:\s*([^,\n]+)/g,
-      replace: (
-        _match: string,
-        role: string,
-        dept: string | undefined,
-        name: string
-      ) => `${role}${dept || ''}: **${name}**`,
-    },
+  enhancedContent = enhancedContent.replace(
+    /Academic\s*Head:\s*\*\*\s*Prof\.\s*Estella\s*V\.\s*Montemayor\*\*/gi,
+    '**Academic Head**: **Prof. Estella V. Montemayor**'
+  );
 
-    {
-      regex:
-        /(Office of [^,\n]+|Admissions Office|Registrar's Office|Registrar Office|Student Affairs|Finance Office)/g,
-      replace: (match: string) => `**${match}**`,
-    },
+  enhancedContent = enhancedContent.replace(
+    /Administrative\s*Assistant:\s*\*\*\s*Mr\.\s*Rael\s*D\.\s*Castaneda\*\*/gi,
+    '**Administrative Assistant**: **Mr. Rael D. Castaneda**'
+  );
 
-    // Course names and codes (BS, BA programs)
-    {
-      regex: /(BS|BA|MS|MA|PhD)\s+in\s+([A-Za-z\s]+)/g,
-      replace: (match: string) => `**${match}**`,
-    },
+  enhancedContent = enhancedContent.replace(
+    /Compliance\s*Officer:\s*\*\*\s*Atty\.\s*Isidro\s*V\.\s*Salonga\*\*/gi,
+    '**Compliance Officer**: **Atty. Isidro V. Salonga**'
+  );
 
-    // Academic forms
-    {
-      regex: /(Form\s+\d+|SF\d+[\-\/]?[A-Z]{2,})/g,
-      replace: (match: string) => `**${match}**`,
-    },
+  // Fix address formatting
+  enhancedContent = enhancedContent.replace(
+    /Address:\s*\*\*\s*Ruby\s*Street,\s*Santa\s*Rosa\s*Commercial\s*Complex,\s*Barangay\s*Balibago,\s*City\s*of\s*Santa\s*Rosa,\s*Laguna\*\*/gi,
+    '**Address**: **Ruby Street, Santa Rosa Commercial Complex, Barangay Balibago, City of Santa Rosa, Laguna**'
+  );
 
-    // Address with better formatting
-    {
-      regex: /(Address|Location):\s*([^\.\n]+\.?)/g,
-      replace: (_match: string, label: string, address: string) =>
-        `${label}: **${address}**`,
-    },
-  ];
+  // Convert phone numbers to clickable links with proper formatting
+  enhancedContent = enhancedContent.replace(
+    /Telephone:\s*\*\*\s*(\(049\)\s*534-2719\s*\/\s*\(02\)\s*8668-4784)\*\*/gi,
+    (_, numbers) => {
+      const parts = numbers.split('/').map((part: string) => part.trim());
+      const links = parts.map((part: string) => {
+        const clean = part.replace(/[\s\-\(\)]/g, '');
+        return `[${part}](tel:${clean})`;
+      });
+      return `**Telephone**: ${links.join(' / ')}`;
+    }
+  );
 
-  // Apply all patterns
-  patterns.forEach((pattern) => {
-    enhancedContent = enhancedContent.replace(pattern.regex, pattern.replace);
-  });
+  enhancedContent = enhancedContent.replace(
+    /Mobile:\s*\*\*\s*(0938-573-4511\s*\/\s*0977-783-2784)\*\*/gi,
+    (_, numbers) => {
+      const parts = numbers.split('/').map((part: string) => part.trim());
+      const links = parts.map((part: string) => {
+        const clean = part.replace(/[\s\-]/g, '');
+        return `[${part}](tel:${clean})`;
+      });
+      return `**Mobile**: ${links.join(' / ')}`;
+    }
+  );
+
+  // Fix social media links
+  enhancedContent = enhancedContent.replace(
+    /Facebook:\s*\*\*\s*(STI College Santa Rosa Official Page)\*\*/gi,
+    '**Facebook**: **STI College Santa Rosa Official Page**'
+  );
+
+  enhancedContent = enhancedContent.replace(
+    /Messenger:\s*\*\*\s*(m\.me\/santarosa\.sti\.edu)\*\*/gi,
+    '**Messenger**: [m.me/santarosa.sti.edu](https://m.me/santarosa.sti.edu)'
+  );
+
+  enhancedContent = enhancedContent.replace(
+    /Google Maps Location:\s*\*\*\s*(.*?maps\.\S+)\*\*/gi,
+    (_, url) => `**Google Maps Location**: [View Map](${url})`
+  );
+
+  // Clean up any remaining cases of double asterisks
+  enhancedContent = enhancedContent.replace(/\*\*\s*\*\*/g, '**');
+  enhancedContent = enhancedContent.replace(/\*\*\*\*\*\*/g, '**');
+  enhancedContent = enhancedContent.replace(/\*\*\*\*/g, '**');
 
   return enhancedContent;
 };
