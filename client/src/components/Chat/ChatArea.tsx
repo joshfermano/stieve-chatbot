@@ -22,7 +22,139 @@ interface TypingAnimationProps {
   onComplete?: () => void;
 }
 
-// Typing animation component
+// Enhanced markdown components with improved emphasis
+const MarkdownComponents = {
+  p: ({ node, ...props }: any) => <p className="mb-4 last:mb-0" {...props} />,
+  ul: ({ node, ...props }: any) => (
+    <ul className="list-disc pl-5 mb-4" {...props} />
+  ),
+  ol: ({ node, ...props }: any) => (
+    <ol className="list-decimal pl-5 mb-4" {...props} />
+  ),
+  li: ({ node, ...props }: any) => <li className="mb-1" {...props} />,
+  strong: ({ node, ...props }: any) => (
+    <strong className="font-bold text-[var(--accent-primary)]" {...props} />
+  ),
+  h1: ({ node, ...props }: any) => (
+    <h1
+      className="text-xl font-bold my-3 text-[var(--accent-primary)]"
+      {...props}
+    />
+  ),
+  h2: ({ node, ...props }: any) => (
+    <h2
+      className="text-lg font-bold my-2 text-[var(--accent-primary)]"
+      {...props}
+    />
+  ),
+  h3: ({ node, ...props }: any) => (
+    <h3
+      className="text-md font-bold my-2 text-[var(--accent-primary)]"
+      {...props}
+    />
+  ),
+  code: ({ node, inline, ...props }: { node?: any; inline?: boolean } & any) =>
+    inline ? (
+      <code
+        className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded"
+        {...props}
+      />
+    ) : (
+      <code
+        className="block bg-gray-200 dark:bg-gray-700 p-2 rounded my-2 overflow-x-auto text-sm"
+        {...props}
+      />
+    ),
+  a: ({ node, ...props }: any) => (
+    <a
+      className="text-[var(--accent-secondary)] font-semibold underline hover:text-[var(--accent-primary)] transition-colors"
+      target="_blank"
+      rel="noopener noreferrer"
+      {...props}
+    />
+  ),
+};
+
+// Function to automatically format important information in the text
+const enhanceImportantInfo = (content: string): string => {
+  // First, let's convert raw URLs to proper markdown links
+  let enhancedContent = content
+    // Convert URLs to proper markdown links
+    .replace(/(?<!\[)(?<!\()(https?:\/\/[^\s]+)(?!\))/g, (match: string) => {
+      // Extract the final part of the URL for a display text
+      let displayText = match.replace(/^https?:\/\/(www\.)?/, '');
+      // Trim long URLs for display
+      if (displayText.length > 30) {
+        displayText = displayText.substring(0, 30) + '...';
+      }
+      return `[${displayText}](${match})`;
+    });
+
+  // Special handling for m.me links
+  enhancedContent = enhancedContent.replace(
+    /m\.me\/([a-zA-Z0-9_.]+)/g,
+    (match: string, _username: string) => `[${match}](https://${match})`
+  );
+
+  // Now apply formatting for important information
+  const patterns = [
+    {
+      regex: /(Telephone|Mobile|Phone):\s*([\d\s\-\/\(\)]+)/g,
+      replace: (_match: string, label: string, number: string) =>
+        `${label}: [${number}](tel:${number.replace(/[\s\-\(\)]/g, '')})`,
+    },
+
+    {
+      regex:
+        /(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)\s+([A-Z][a-zA-Z]+\s+[A-Z]\.\s+[A-Z][a-zA-Z]+)/g,
+      replace: (match: string) => `**${match}**`,
+    },
+
+    {
+      regex:
+        /(President|Head|Dean|Director|Officer|Assistant|Coordinator)(\s+of\s+[\w\s]+)?:\s*([^,\n]+)/g,
+      replace: (
+        _match: string,
+        role: string,
+        dept: string | undefined,
+        name: string
+      ) => `${role}${dept || ''}: **${name}**`,
+    },
+
+    {
+      regex:
+        /(Office of [^,\n]+|Admissions Office|Registrar's Office|Registrar Office|Student Affairs|Finance Office)/g,
+      replace: (match: string) => `**${match}**`,
+    },
+
+    // Course names and codes (BS, BA programs)
+    {
+      regex: /(BS|BA|MS|MA|PhD)\s+in\s+([A-Za-z\s]+)/g,
+      replace: (match: string) => `**${match}**`,
+    },
+
+    // Academic forms
+    {
+      regex: /(Form\s+\d+|SF\d+[\-\/]?[A-Z]{2,})/g,
+      replace: (match: string) => `**${match}**`,
+    },
+
+    // Address with better formatting
+    {
+      regex: /(Address|Location):\s*([^\.\n]+\.?)/g,
+      replace: (_match: string, label: string, address: string) =>
+        `${label}: **${address}**`,
+    },
+  ];
+
+  // Apply all patterns
+  patterns.forEach((pattern) => {
+    enhancedContent = enhancedContent.replace(pattern.regex, pattern.replace);
+  });
+
+  return enhancedContent;
+};
+
 const TypingAnimation = ({
   content,
   speed = 20,
@@ -33,10 +165,13 @@ const TypingAnimation = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
+  // Enhance the content with auto-formatting for important information
+  const enhancedContent = enhanceImportantInfo(content);
+
   useEffect(() => {
-    if (currentIndex < content.length) {
+    if (currentIndex < enhancedContent.length) {
       const timeout = setTimeout(() => {
-        setDisplayedContent((prev) => prev + content[currentIndex]);
+        setDisplayedContent((prev) => prev + enhancedContent[currentIndex]);
         setCurrentIndex((prev) => prev + 1);
       }, speed);
 
@@ -45,12 +180,17 @@ const TypingAnimation = ({
       setIsComplete(true);
       onComplete?.();
     }
-  }, [content, currentIndex, speed, isComplete, onComplete]);
+  }, [enhancedContent, currentIndex, speed, isComplete, onComplete]);
 
   return (
     <div className={`${className} relative`}>
-      {displayedContent}
-      {currentIndex < content.length && (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
+        components={MarkdownComponents}>
+        {displayedContent}
+      </ReactMarkdown>
+      {currentIndex < enhancedContent.length && (
         <span className="ml-0.5 inline-block w-1 h-4 bg-[var(--accent-primary)] animate-pulse" />
       )}
     </div>
@@ -62,7 +202,6 @@ const ChatArea = ({ messages = [], loading = false }: ChatAreaProps) => {
   const [animatingMessages, setAnimatingMessages] = useState<number[]>([]);
   const [completedMessages, setCompletedMessages] = useState<number[]>([]);
 
-  // Track when a new message appears from the model
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessageIndex = messages.length - 1;
@@ -184,49 +323,8 @@ const ChatArea = ({ messages = [], loading = false }: ChatAreaProps) => {
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         rehypePlugins={[rehypeSanitize]}
-                        components={{
-                          p: ({ node, ...props }) => (
-                            <p className="mb-4 last:mb-0" {...props} />
-                          ),
-                          ul: ({ node, ...props }) => (
-                            <ul className="list-disc pl-5 mb-4" {...props} />
-                          ),
-                          ol: ({ node, ...props }) => (
-                            <ol className="list-decimal pl-5 mb-4" {...props} />
-                          ),
-                          li: ({ node, ...props }) => (
-                            <li className="mb-1" {...props} />
-                          ),
-                          strong: ({ node, ...props }) => (
-                            <strong className="font-bold" {...props} />
-                          ),
-                          h1: ({ node, ...props }) => (
-                            <h1 className="text-xl font-bold my-3" {...props} />
-                          ),
-                          h2: ({ node, ...props }) => (
-                            <h2 className="text-lg font-bold my-2" {...props} />
-                          ),
-                          h3: ({ node, ...props }) => (
-                            <h3 className="text-md font-bold my-2" {...props} />
-                          ),
-                          code: ({
-                            node,
-                            inline,
-                            ...props
-                          }: { node?: any; inline?: boolean } & any) =>
-                            inline ? (
-                              <code
-                                className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded"
-                                {...props}
-                              />
-                            ) : (
-                              <code
-                                className="block bg-gray-200 dark:bg-gray-700 p-2 rounded my-2 overflow-x-auto text-sm"
-                                {...props}
-                              />
-                            ),
-                        }}>
-                        {message.content}
+                        components={MarkdownComponents}>
+                        {enhanceImportantInfo(message.content)}
                       </ReactMarkdown>
                     )}
                   </div>

@@ -23,6 +23,55 @@ const model = genAI.getGenerativeModel({
     'Provide detailed and precise answers regarding STI College Sta. Rosa, Laguna.\n' +
     "Assist prospective and current students, parents, and other stakeholders in understanding the institution's programs, policies, and services.\n" +
     'Maintain a strict focus on STI College Sta. Rosa, Laguna-related topics, ensuring that queries beyond this scope are professionally declined.\n\n' +
+    'ADMINISTRATIVE FACULTY AND STAFF:\n' +
+    'As of March 2025, STI College Santa Rosa, Laguna is headed by Mr. Antonio M. del Carmen, EdD, MBA as the President of the institution. Other key staff include:\n' +
+    '- Program Head: Dr. Alonzo Iñiguez, PhD\n' +
+    '- Academic Head: Prof. Estella V. Montemayor, MAEd\n' +
+    '- Administrative Assistant: Mr. Rael D. Castaneda, MBA\n' +
+    '- Compliance Officer: Atty. Isidro V. Salonga, JD, CPA\n\n' +
+    'TESDA ACCREDITED SHORT-TERM COURSES:\n' +
+    'STI College Santa Rosa offers several short-term and certificate courses accredited by the Technical Education and Skills Development Authority (TESDA):\n' +
+    '- 3D Animation NC III: 1,040 hours\n' +
+    '- Caregiving NC II: 906 hours\n' +
+    '- Commercial Cooking NC II: 436 hours\n' +
+    '- Computer Hardware Servicing NC II: 356 hours\n' +
+    '- Finishing Course for Call Center Agents: 100 hours\n' +
+    '- Food & Beverage Service NC II: 436 hours\n' +
+    '- Health Care Services NC II: 1 year\n' +
+    '- Programming NC IV: 252 hours\n\n' +
+    'ADMISSION REQUIREMENTS:\n' +
+    'Senior High School (Grade 11) Requirements:\n' +
+    "- Original Form 138/SF9-JHS (Learner's Progress Report Card)\n" +
+    "- Original Form 137/SF10-JHS (Learner's Permanent Academic Record)\n" +
+    '- PSA-issued Birth Certificate\n' +
+    '- Original Copy of Certificate of Good Moral Character or recommendation from the School Principal\n' +
+    '- Medical Certificate with Chest X-ray results\n\n' +
+    'Senior High School (Grade 12 Transferees) Additional Requirements:\n' +
+    '- Certificate of Transfer (Honorable Dismissal)\n' +
+    '- Original Form 138/SF9-SHS\n' +
+    '- Original Form 137/SF10-SHS (Copy for STI)\n\n' +
+    'College Admission Requirements:\n' +
+    '- For Senior High School Graduates:\n' +
+    "  - Original Form 138/SF9-SHS (Learner's Progress Report Card)\n" +
+    "  - Original Form 137/SF10-SHS (Learner's Permanent Academic Record)\n" +
+    '  - PSA-issued Birth Certificate\n' +
+    '  - Original Copy of Certificate of Good Moral Character\n' +
+    '  - Medical Certificate with Chest X-ray results\n' +
+    '- For College Transferees:\n' +
+    '  - Certificate of Transfer (Honorable Dismissal)\n' +
+    '  - Official Transcript of Records\n' +
+    '  - PSA-issued Birth Certificate\n' +
+    '  - Original Copy of Certificate of Good Moral Character\n' +
+    '- For Foreign Students:\n' +
+    '  - Five copies of Personal History Statement (PHS) with thumbprints and photo\n' +
+    '  - Authenticated Transcript of Records/Scholastic Records\n' +
+    '  - Notarized Affidavit of Support including bank statements\n' +
+    '  - Photocopy of passport and authenticated birth certificate\n\n' +
+    'Note: Applicants to BS Hospitality Management, BS Culinary Management, Hotel & Restaurant Administration, or Hospitality and Restaurant Services require a Medical Certificate of Hepatitis A & B Screening.\n\n' +
+    'COLLEGE APPLICATION PROCESS:\n' +
+    '1. Online Application: Visit apply.sti.edu and complete the application form.\n' +
+    "2. Submit required documents to the Registrar's Office.\n" +
+    '3. Contact the Admissions Office for any questions.\n\n' +
     'Scope of Knowledge and Covered Topics\n\n' +
     'The chatbot should be able to comprehensively address all inquiries related to the institution. Below are the primary categories and subtopics it must cover in detail:\n\n' +
     '2.1 General Information\n' +
@@ -108,11 +157,61 @@ const generationConfig = {
   responseMimeType: 'text/plain',
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Function to check if error is a service overload error
+const isServiceOverloadError = (error: any): boolean => {
+  return (
+    error?.status === 503 ||
+    (error?.message && error.message.includes('overloaded')) ||
+    (error?.message && error.message.includes('Service Unavailable'))
+  );
+};
+
+// Retry function with exponential backoff
+const retryWithExponentialBackoff = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 5,
+  initialDelayMs: number = 1000
+): Promise<T> => {
+  let retries = 0;
+  let lastError: any;
+
+  while (retries < maxRetries) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      // Only retry on service overload errors
+      if (isServiceOverloadError(error)) {
+        const delayMs = initialDelayMs * Math.pow(2, retries);
+        const jitter = Math.random() * 200;
+
+        console.log(
+          `Gemini API overloaded, retrying in ${delayMs / 1000}s (attempt ${
+            retries + 1
+          }/${maxRetries})...`
+        );
+        await sleep(delayMs + jitter);
+        retries++;
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  console.error(`Gemini API still overloaded after ${maxRetries} retries`);
+  throw lastError;
+};
+
 const generateSafeResponse = async (message: string): Promise<string> => {
   try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: message }] }],
-      generationConfig,
+    const result = await retryWithExponentialBackoff(async () => {
+      return await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig,
+      });
     });
 
     const response = await result.response;
@@ -125,6 +224,12 @@ const generateSafeResponse = async (message: string): Promise<string> => {
     return text;
   } catch (error) {
     console.error('Gemini API Error:', error);
+
+    // Provide a more user-friendly fallback response
+    if (isServiceOverloadError(error)) {
+      return "I'm experiencing high traffic at the moment. Please try again in a few moments. If you have an urgent inquiry about STI College Sta. Rosa, you can contact the admissions office directly at (049) 534-2719 or visit the official website.";
+    }
+
     throw new Error('Failed to generate AI response');
   }
 };
