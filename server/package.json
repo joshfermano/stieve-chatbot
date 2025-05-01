@@ -9,7 +9,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "postinstall": "npm run build",
-    "render-build": "npm install --save-dev @types/express @types/cors @types/cookie-parser @types/jsonwebtoken @types/bcryptjs && npm run build"
+    "render-build": "npm ci && npm install --no-save @types/express @types/cors @types/cookie-parser @types/jsonwebtoken @types/bcryptjs && npm run build"
   },
   "keywords": [],
   "author": "",

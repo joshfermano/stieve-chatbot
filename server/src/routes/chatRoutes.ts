@@ -6,8 +6,8 @@ const router = express.Router();
 
 router.post(
   '/message',
-  optionalAuth as RequestHandler,
-  sendMessage as RequestHandler
+  optionalAuth as unknown as RequestHandler,
+  sendMessage as unknown as RequestHandler
 );
 
 export default router;

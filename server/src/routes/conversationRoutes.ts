@@ -10,11 +10,14 @@ import {
 const router = express.Router();
 
 // All conversation routes require authentication
-router.use(authenticate as RequestHandler);
+router.use(authenticate as unknown as RequestHandler);
 
-router.get('/', getConversations as RequestHandler);
-router.post('/', createConversation as RequestHandler);
-router.delete('/:id', deleteConversation as RequestHandler);
-router.get('/:id/messages', getConversationMessages as RequestHandler);
+router.get('/', getConversations as unknown as RequestHandler);
+router.post('/', createConversation as unknown as RequestHandler);
+router.delete('/:id', deleteConversation as unknown as RequestHandler);
+router.get(
+  '/:id/messages',
+  getConversationMessages as unknown as RequestHandler
+);
 
 export default router;

@@ -9,13 +9,13 @@ import { authenticate } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
-router.post('/register', register as RequestHandler);
-router.post('/login', login as RequestHandler);
+router.post('/register', register as unknown as RequestHandler);
+router.post('/login', login as unknown as RequestHandler);
 router.get(
   '/verify',
-  authenticate as RequestHandler,
-  verifyToken as RequestHandler
+  authenticate as unknown as RequestHandler,
+  verifyToken as unknown as RequestHandler
 );
-router.post('/logout', logout as RequestHandler);
+router.post('/logout', logout as unknown as RequestHandler);
 
 export default router;
