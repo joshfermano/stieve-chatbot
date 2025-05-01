@@ -1,13 +1,10 @@
-import express, { RequestHandler } from 'express';
-import { optionalAuth } from '../middlewares/optionalAuthMiddleware';
+import { Router } from 'express';
 import { sendMessage } from '../controllers/chatController';
+import { optionalAuth } from '../middlewares/optionalAuthMiddleware';
 
-const router = express.Router();
+const router = Router();
 
-router.post(
-  '/message',
-  optionalAuth as RequestHandler,
-  sendMessage as RequestHandler
-);
+// Chat routes
+router.post('/send', optionalAuth, sendMessage);
 
 export default router;

@@ -15,84 +15,99 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteConversation = exports.getConversationMessages = exports.createConversation = exports.getConversations = void 0;
 const Conversation_1 = __importDefault(require("../models/Conversation"));
 const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user.id;
-        const conversations = yield Conversation_1.default.find({ userId })
-            .sort({ updatedAt: -1 })
-            .select('title createdAt updatedAt')
-            .lean();
-        const formattedConversations = conversations.map((conv) => ({
-            id: conv._id.toString(),
-            title: conv.title,
-            timestamp: conv.updatedAt || conv.createdAt,
-        }));
-        res.json(formattedConversations);
+        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.id)) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        const conversations = yield Conversation_1.default.find({ userId: req.user.id })
+            .select('_id title createdAt updatedAt')
+            .sort({ updatedAt: -1 });
+        return res.json(conversations);
     }
     catch (error) {
         console.error('Error fetching conversations:', error);
-        res.status(500).json({ message: 'Failed to fetch conversations' });
+        return res.status(500).json({ message: 'Failed to fetch conversations' });
     }
 });
 exports.getConversations = getConversations;
+/**
+ * Create a new conversation
+ */
 const createConversation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user.id;
+        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.id)) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
         const { title } = req.body;
-        console.log('Creating conversation for user:', userId, 'with title:', title);
         const conversation = yield Conversation_1.default.create({
-            userId,
-            title: title || 'New Chat',
+            title: title || 'New Conversation',
+            userId: req.user.id,
             messages: [],
         });
-        console.log('Conversation created:', conversation._id);
-        res.status(201).json({
-            id: conversation._id.toString(),
+        return res.status(201).json({
+            _id: conversation._id,
             title: conversation.title,
-            timestamp: conversation.createdAt,
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt,
         });
     }
     catch (error) {
         console.error('Error creating conversation:', error);
-        res.status(500).json({ message: 'Failed to create conversation' });
+        return res.status(500).json({ message: 'Failed to create conversation' });
     }
 });
 exports.createConversation = createConversation;
+/**
+ * Get messages for a specific conversation
+ */
 const getConversationMessages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user.id;
+        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.id)) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
         const { id } = req.params;
         const conversation = yield Conversation_1.default.findOne({
             _id: id,
-            userId,
+            userId: req.user.id,
         });
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation not found' });
         }
-        res.json({ messages: conversation.messages });
+        return res.json({ messages: conversation.messages });
     }
     catch (error) {
         console.error('Error fetching conversation messages:', error);
-        res.status(500).json({ message: 'Failed to fetch conversation messages' });
+        return res
+            .status(500)
+            .json({ message: 'Failed to fetch conversation messages' });
     }
 });
 exports.getConversationMessages = getConversationMessages;
+/**
+ * Delete a conversation
+ */
 const deleteConversation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user.id;
+        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.id)) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
         const { id } = req.params;
-        console.log('Deleting conversation:', id, 'for user:', userId);
-        const conversation = yield Conversation_1.default.findOneAndDelete({
+        const result = yield Conversation_1.default.deleteOne({
             _id: id,
-            userId,
+            userId: req.user.id,
         });
-        if (!conversation) {
+        if (result.deletedCount === 0) {
             return res.status(404).json({ message: 'Conversation not found' });
         }
-        res.json({ message: 'Conversation deleted successfully' });
+        return res.json({ message: 'Conversation deleted successfully' });
     }
     catch (error) {
         console.error('Error deleting conversation:', error);
-        res.status(500).json({ message: 'Failed to delete conversation' });
+        return res.status(500).json({ message: 'Failed to delete conversation' });
     }
 });
 exports.deleteConversation = deleteConversation;

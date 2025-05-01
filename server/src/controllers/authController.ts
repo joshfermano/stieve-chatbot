@@ -1,105 +1,108 @@
-import User from '../models/Users';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import User from '../models/Users';
 import 'dotenv/config';
 
-interface RegisterRequest extends Request {
-  body: {
-    username: string;
-    email: string;
-    password: string;
-  };
+interface RegisterRequestBody {
+  username: string;
+  email: string;
+  password: string;
 }
 
-interface LoginRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-  };
+interface LoginRequestBody {
+  email: string;
+  password: string;
 }
 
-// Get cookie settings based on environment
 const getCookieOptions = () => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  return {
+  const cookieOptions: any = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-    path: '/',
-  } as const;
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+    sameSite: 'lax',
+  };
+
+  if (process.env.NODE_ENV === 'production') {
+    cookieOptions.secure = true;
+  }
+
+  return cookieOptions;
 };
 
-export const register = async (req: RegisterRequest, res: Response) => {
-  const { username, email, password } = req.body;
-
+export const register = async (req: Request, res: Response) => {
   try {
+    const { username, email, password } = req.body as RegisterRequestBody;
+
     // Check if user already exists
-    const isUserExists = await User.findOne({ $or: [{ username }, { email }] });
-    if (isUserExists) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create new user
-    const user = await User.create({ username, email, password });
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user
+    const user = await User.create({
+      username,
+      email,
+      password: hashedPassword,
+    });
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, username: user.username, email: user.email },
-      process.env.ACCESS_TOKEN_SECRET || 'fallback_secret',
-      { expiresIn: '1d' }
+      { id: user._id, email: user.email, username: user.username },
+      process.env.ACCESS_TOKEN_SECRET || '',
+      {
+        expiresIn: '7d',
+      }
     );
 
-    // Set token in HTTP-only cookie
     res.cookie('token', token, getCookieOptions());
 
-    // Return user info (without sensitive data)
+    // Send response
     res.status(201).json({
-      message: 'User registered successfully',
-      user: {
-        username: user.username,
-        email: user.email,
-      },
+      id: user._id,
+      username: user.username,
+      email: user.email,
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Register error:', error);
     res.status(500).json({ message: 'Failed to register user' });
   }
 };
 
-export const login = async (req: LoginRequest, res: Response) => {
-  const { email, password } = req.body;
-
+export const login = async (req: Request, res: Response) => {
   try {
-    // Check if user exists
+    const { email, password } = req.body as LoginRequestBody;
+
+    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' }); // Better security to use generic message
     }
 
-    // Check if password is correct
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, username: user.username, email: user.email },
-      process.env.ACCESS_TOKEN_SECRET || 'fallback_secret',
-      { expiresIn: '1d' }
+      { id: user._id, email: user.email, username: user.username },
+      process.env.ACCESS_TOKEN_SECRET || '',
+      { expiresIn: '7d' }
     );
 
-    // Set token in HTTP-only cookie
     res.cookie('token', token, getCookieOptions());
 
-    // Return user info
+    // Send response
     res.status(200).json({
-      message: 'Login successful',
-      user: {
-        username: user.username,
-        email: user.email,
-      },
+      id: user._id,
+      username: user.username,
+      email: user.email,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -107,38 +110,33 @@ export const login = async (req: LoginRequest, res: Response) => {
   }
 };
 
-export const logout = async (req: Request, res: Response) => {
+export const logout = (req: Request, res: Response) => {
   try {
-    // Clear the auth cookie
     res.clearCookie('token', {
-      ...getCookieOptions(),
-      maxAge: 0,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
     });
 
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
     res.status(500).json({ message: 'Failed to logout' });
   }
 };
 
 export const verifyToken = async (req: Request, res: Response) => {
   try {
-    // The user data is attached to req by the authenticate middleware
-    const user = (req as any).user;
-
-    if (!user) {
+    // User should be attached by auth middleware
+    if (!req.user) {
       return res.status(401).json({ message: 'Authentication failed' });
     }
 
-    // Return user data with the response
+    // Send the user data
     res.status(200).json({
-      username: user.username,
-      email: user.email,
-      valid: true,
+      user: req.user,
+      authenticated: true,
     });
   } catch (error) {
-    console.error('Error verifying token:', error);
     res.status(401).json({ message: 'Authentication failed' });
   }
 };

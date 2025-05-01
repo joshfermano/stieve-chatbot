@@ -1,54 +1,45 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import 'dotenv/config';
 
-interface JwtPayload {
-  id: string;
-  username: string;
-  email: string;
-}
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload;
-    }
-  }
-}
-
-export const authenticate = async (
+export const authenticate = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const token = req.cookies.token;
+    // Get token from cookies
+    const token = req.cookies?.token;
 
+    // Check if token exists
     if (!token) {
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    try {
-      const decoded = jwt.verify(
-        token,
-        process.env.ACCESS_TOKEN_SECRET || 'fallback_secret'
-      ) as JwtPayload;
+    // Verify token
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || '');
 
-      req.user = decoded;
-      next();
-    } catch (jwtError) {
-      // Clear the invalid token cookie
+    // Attach user data to request
+    req.user = decoded as jwt.JwtPayload;
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      // Clear expired cookie
       res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/',
+        sameSite: 'lax',
       });
 
-      console.error('JWT verification error:', jwtError);
+      return res.status(401).json({ message: 'Token expired' });
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({ message: 'Invalid token' });
     }
-  } catch (error) {
-    console.error('Authentication error:', error);
+
+    console.error('Auth middleware error:', error);
     return res.status(500).json({ message: 'Authentication failed' });
   }
 };

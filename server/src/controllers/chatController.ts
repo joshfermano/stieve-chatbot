@@ -1,91 +1,85 @@
 import { Request, Response } from 'express';
-import { generateSafeResponse } from '../config/gemini';
-import { model } from '../config/gemini';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import Conversation from '../models/Conversation';
+import 'dotenv/config';
 
-async function generateResponse(message: string): Promise<string> {
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+export const sendMessage = async (req: Request, res: Response) => {
   try {
-    const result = await model.generateContent(message);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error('Error generating AI response:', error);
-    throw new Error('Failed to generate response');
-  }
-}
+    const { message, conversationId } = req.body as {
+      message: string;
+      conversationId?: string;
+    };
 
-export const sendMessage = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const { message, conversationId } = req.body;
+    // Generate AI response
+    try {
+      const result = await model.generateContent(message);
+      const text = result.response.text();
 
-    // Handle guest mode
-    if (conversationId === 'guest') {
-      try {
-        const text = await generateSafeResponse(message);
-        res.json({
+      // If no conversation ID or user ID, just return the response
+      if (!conversationId || !req.user?.id) {
+        return res.json({
           response: text,
-          conversationId: 'guest',
           success: true,
         });
-      } catch (error) {
-        console.error('Error in guest chat:', error);
-        res.status(500).json({
-          message: 'Failed to generate response',
-          success: false,
-        });
       }
-      return;
+
+      // Otherwise, try to save to existing conversation
+    } catch (aiError) {
+      console.error('AI generation error:', aiError);
+      return res.status(500).json({
+        message: 'Failed to generate AI response',
+        success: false,
+      });
     }
 
-    // For authenticated users
+    // Get or create conversation
     if (!req.user || !req.user.id) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    let conversation = await Conversation.findOne({
+    // Try to find the conversation
+    const conversation = await Conversation.findOne({
       _id: conversationId,
       userId: req.user.id,
     });
 
     if (!conversation) {
-      res.status(404).json({ message: 'Conversation not found' });
-      return;
+      return res.status(404).json({ message: 'Conversation not found' });
     }
 
-    // Update conversation title for first message
-    if (conversation.messages.length === 0) {
-      conversation.title =
-        message.length > 50 ? `${message.slice(0, 50)}...` : message;
-    }
+    // Generate AI response
+    const result = await model.generateContent(message);
+    const text = result.response.text();
 
-    // Add user message
-    conversation.messages.push({
-      role: 'user',
-      content: message,
-    });
-
-    // Generate and add AI response
-    const text = await generateSafeResponse(message);
-    conversation.messages.push({
-      role: 'model',
-      content: text,
-    });
+    // Save the user message and AI response to the conversation
+    conversation.messages.push(
+      {
+        role: 'user',
+        content: message,
+        timestamp: new Date(),
+      },
+      {
+        role: 'assistant',
+        content: text,
+        timestamp: new Date(),
+      }
+    );
 
     await conversation.save();
 
-    res.json({
+    // Return the AI response
+    return res.json({
       response: text,
-      title: conversation.title,
+      success: true,
       conversationId: conversation._id,
     });
   } catch (error) {
-    console.error('Error in sendMessage:', error);
-    res.status(500).json({
-      message: 'Failed to process message',
+    console.error('Chat controller error:', error);
+    return res.status(500).json({
+      message: 'Failed to process chat message',
       success: false,
     });
   }
