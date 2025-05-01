@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
-import { fetchWithAuth } from '../config/apiConfig';
+import { fetchWithAuth } from '../services/apiConfig';
 
 interface Conversation {
   id: string;
@@ -154,7 +154,7 @@ const MainLayout = () => {
   }, [isAuthenticated]);
 
   return (
-    <div className="flex flex-col min-h-screen dark:bg-darkBlue">
+    <div className="flex flex-col min-h-screen bg-[var(--background)]">
       <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
 
       <div className="flex flex-1 relative">
@@ -171,7 +171,8 @@ const MainLayout = () => {
         <main
           className={`
             flex-1 transition-all duration-300 
-            ${isSidebarOpen ? 'ml-64' : 'ml-0'}
+            ${isSidebarOpen ? 'md:ml-64' : 'ml-0'}
+            text-[var(--text-primary)]
           `}>
           <Outlet context={{ activeConversation }} />
         </main>

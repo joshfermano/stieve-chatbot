@@ -17,7 +17,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 require("dotenv/config");
 const connectDb = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const connectionString = process.env.MONGO_URL || 'mongodb://localhost:27017/stieve';
+        const connectionString = process.env.MONGO_URL;
         yield mongoose_1.default.connect(connectionString);
         mongoose_1.default.connection.on('connected', () => {
             console.log('✅ MongoDB connected successfully');

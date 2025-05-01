@@ -3,8 +3,7 @@ import 'dotenv/config';
 
 export const connectDb = async (): Promise<boolean> => {
   try {
-    const connectionString =
-      process.env.MONGO_URL || 'mongodb://localhost:27017/stieve';
+    const connectionString = process.env.MONGO_URL as string;
     await mongoose.connect(connectionString);
 
     mongoose.connection.on('connected', () => {

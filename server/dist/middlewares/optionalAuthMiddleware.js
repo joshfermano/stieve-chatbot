@@ -14,19 +14,33 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.optionalAuth = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+// Optional auth middleware - allows requests without a token
 const optionalAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const token = req.cookies.token;
+        // If no token, just continue without setting user
         if (!token) {
             return next();
         }
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.ACCESS_TOKEN_SECRET || 'fallback_secret');
-        req.user = decoded;
+        try {
+            const decoded = jsonwebtoken_1.default.verify(token, process.env.ACCESS_TOKEN_SECRET || 'fallback_secret');
+            req.user = decoded;
+        }
+        catch (jwtError) {
+            // Clear invalid token but don't block the request
+            console.error('JWT verification error in optional auth:', jwtError);
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                path: '/',
+            });
+        }
         next();
     }
     catch (error) {
         console.error('Optional auth error:', error);
-        next();
+        next(); // Proceed anyway since this is optional auth
     }
 });
 exports.optionalAuth = optionalAuth;

@@ -20,13 +20,26 @@ const authenticate = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (!token) {
             return res.status(401).json({ message: 'No token provided' });
         }
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.ACCESS_TOKEN_SECRET || 'fallback_secret');
-        req.user = decoded;
-        next();
+        try {
+            const decoded = jsonwebtoken_1.default.verify(token, process.env.ACCESS_TOKEN_SECRET || 'fallback_secret');
+            req.user = decoded;
+            next();
+        }
+        catch (jwtError) {
+            // Clear the invalid token cookie
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                path: '/',
+            });
+            console.error('JWT verification error:', jwtError);
+            return res.status(401).json({ message: 'Invalid token' });
+        }
     }
     catch (error) {
         console.error('Authentication error:', error);
-        return res.status(401).json({ message: 'Invalid token' });
+        return res.status(500).json({ message: 'Authentication failed' });
     }
 });
 exports.authenticate = authenticate;

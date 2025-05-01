@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ChatArea from '../components/Chat/ChatArea';
 import ChatInput from '../components/Chat/ChatInput';
-import { fetchWithAuth } from '../config/apiConfig';
+import { fetchWithAuth } from '../services/apiConfig';
 
 interface Message {
   role: 'user' | 'model';
@@ -20,7 +20,6 @@ const Homepage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Listen for logout events
   useEffect(() => {
     const handleLogout = () => {
       setMessages([]);
@@ -33,7 +32,6 @@ const Homepage = () => {
     };
   }, []);
 
-  // Load guest messages from localStorage
   useEffect(() => {
     if (!isAuthenticated) {
       const savedMessages = localStorage.getItem('guestChat');
@@ -45,14 +43,12 @@ const Homepage = () => {
     }
   }, [isAuthenticated]);
 
-  // Save guest messages to localStorage
   useEffect(() => {
     if (!isAuthenticated && messages.length > 0) {
       localStorage.setItem('guestChat', JSON.stringify(messages));
     }
   }, [messages, isAuthenticated]);
 
-  // Listen for conversation updates
   useEffect(() => {
     const handleConversationUpdate = () => {
       if (activeConversation) {
@@ -86,12 +82,10 @@ const Homepage = () => {
     }
   };
 
-  // Update messages when active conversation changes
   useEffect(() => {
     if (isAuthenticated && activeConversation) {
       fetchMessages(activeConversation);
     } else if (!isAuthenticated) {
-      // Load guest messages (already handled in another useEffect)
     } else {
       setMessages([]);
     }
@@ -149,25 +143,24 @@ const Homepage = () => {
     }
   };
 
-  // Function to clear conversation for guest mode
   const handleClearConversation = () => {
     if (!isAuthenticated) {
-      // Clear messages state
       setMessages([]);
 
-      // Clear localStorage
       localStorage.removeItem('guestChat');
     }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
-      <ChatArea messages={messages} loading={loading} />
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        isLoading={loading}
-        onClearConversation={handleClearConversation}
-      />
+    <div className="flex flex-col h-[calc(100vh-61px)]">
+      <div className="flex-grow overflow-hidden flex flex-col">
+        <ChatArea messages={messages} loading={loading} />
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          isLoading={loading}
+          onClearConversation={handleClearConversation}
+        />
+      </div>
     </div>
   );
 };

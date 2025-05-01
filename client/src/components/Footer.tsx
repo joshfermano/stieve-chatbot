@@ -1,9 +1,19 @@
 const Footer = () => {
   return (
-    <footer className="font-poppins p-4 text-darkBlue dark:text-white dark:bg-darkBlue">
-      <div className="flex items-center justify-between text-xs md:text-sm mx-2 border-t border-gray-200 py-2">
-        <h1>&copy; 2025 Josh Khovick Fermano.</h1>
-        <h1>All Rights Reserved.</h1>
+    <footer className="bg-[var(--sidebar-bg)] border-t border-[var(--border-color)] py-2 text-center text-xs">
+      <div className="flex flex-col items-center justify-center">
+        <div>
+          <span className="text-[var(--accent-primary)] font-medium">
+            STI College
+          </span>
+          <span className="mx-2 text-gray-400">•</span>
+          <span className="text-gray-600 dark:text-gray-400">
+            Sta. Rosa, Laguna
+          </span>
+        </div>
+        <div className="text-gray-500 dark:text-gray-400 mt-1">
+          All Rights Reserved.
+        </div>
       </div>
     </footer>
   );

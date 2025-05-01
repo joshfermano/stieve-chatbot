@@ -10,7 +10,7 @@ import {
   FiLogIn,
   FiUser,
 } from 'react-icons/fi';
-import Perpslogo from '../assets/perpslogo.png';
+import stiLogo from '../assets/sti_logo.png';
 
 interface NavbarProps {
   toggleSidebar: () => void;
@@ -54,69 +54,95 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }: NavbarProps) => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-between p-4 bg-white dark:bg-darkBlue text-darkBlue dark:text-white border-b border-gray-200">
-      <div className="flex items-center">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 mr-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}>
-          {isSidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
-        </button>
+    <nav className="sticky top-0 z-50 bg-white dark:bg-[var(--sidebar-bg)] shadow-sm border-b border-[var(--border-color)]">
+      <div className="px-3 sm:px-4 py-2.5 mx-auto flex items-center justify-between">
+        {/* Left side - Logo and menu toggle */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 sm:p-2 rounded-lg bg-transparent hover:bg-[var(--sidebar-bg)] dark:hover:bg-[var(--card-bg)] text-[var(--text-primary)] transition-colors"
+            aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}>
+            {isSidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+          </button>
 
-        <Link to="/" className="flex items-center">
-          <img
-            src={Perpslogo}
-            alt="Perps Logo"
-            className="w-8 h-10 mr-4 hidden md:flex"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = '/vite.svg';
-            }}
-          />
-          <span className="font-semibold text-md md:text-xl">Perps Bot</span>
-        </Link>
-      </div>
-
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={toggleDarkMode}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          aria-label={
-            darkMode ? 'Switch to light mode' : 'Switch to dark mode'
-          }>
-          {darkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
-        </button>
-
-        {isAuthenticated ? (
-          <div className="flex items-center justify-between space-x-4">
-            <div className="flex items-center justify-between space-x-2">
-              <h1 className="text-md md:text-xl">{user?.username}</h1>
-
-              <div className="p-2 bg-blue-700 rounded-full text-light">
-                <FiUser className="text-md md:text-xl" />
-              </div>
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 flex items-center justify-center rounded-lg bg-[var(--accent-secondary)] p-1">
+              <img
+                src={stiLogo}
+                alt="STI Logo"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/vite.svg';
+                }}
+              />
             </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-base sm:text-lg text-[var(--accent-primary)] leading-none">
+                STIeve
+              </span>
+              <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                Sta. Rosa, Laguna
+              </span>
+            </div>
+          </Link>
+        </div>
 
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 text-md md:text-xl bg-red-600 text-light p-2 rounded-full cursor-pointer">
-              <FiLogOut />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center space-x-2">
-            <Link
-              to="/auth/login"
-              className="flex items-center px-3 py-1.5 text-xs md:text-sm font-medium bg-blue-800 hover:bg-darkBlue hover:text-light rounded-md text-white hover:scale-105 dark:hover:bg-light dark:hover:text-darkBlue transition-all duration-500">
-              <FiLogIn className="mr-1" /> Login
-            </Link>
-            <Link
-              to="/auth/register"
-              className="flex items-center px-3 py-1.5 text-xs md:text-sm font-medium bg-blue-800 hover:bg-darkBlue hover:text-light rounded-md text-white hover:scale-105 dark:hover:bg-light dark:hover:text-darkBlue transition-all duration-500">
-              <FiUser className="mr-1" /> Register
-            </Link>
-          </div>
-        )}
+        {/* Right side - Theme toggle and auth buttons */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={toggleDarkMode}
+            className="p-1.5 sm:p-2 rounded-lg bg-transparent hover:bg-[var(--sidebar-bg)] dark:hover:bg-[var(--card-bg)] text-[var(--text-primary)] transition-colors"
+            aria-label={
+              darkMode ? 'Switch to light mode' : 'Switch to dark mode'
+            }>
+            {darkMode ? <FiSun size={18} /> : <FiMoon size={18} />}
+          </button>
+
+          {isAuthenticated ? (
+            // Authenticated user menu
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 border border-[var(--border-color)] bg-[var(--card-bg)] px-2 py-1 rounded-lg">
+                <div className="w-7 h-7 rounded-lg bg-[var(--accent-primary)] text-white flex items-center justify-center text-sm">
+                  {user?.username.charAt(0).toUpperCase()}
+                </div>
+                <span className="font-medium text-xs text-[var(--text-primary)]">
+                  {user?.username}
+                </span>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="flex sm:hidden items-center justify-center p-1.5 rounded-lg text-[var(--text-primary)] hover:bg-[var(--sidebar-bg)] dark:hover:bg-[var(--card-bg)] transition-colors"
+                aria-label="Log out">
+                <FiLogOut size={20} />
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors text-xs font-medium">
+                <FiLogOut size={14} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            // Guest auth options
+            <div className="flex items-center gap-2">
+              <Link
+                to="/auth/login"
+                className="flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] transition-colors">
+                <FiLogIn className="mr-1.5" />
+                <span className="hidden sm:inline">Sign In</span>
+                <span className="sm:hidden">Login</span>
+              </Link>
+              <Link
+                to="/auth/register"
+                className="hidden sm:flex items-center px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--accent-primary)] text-[var(--accent-primary)] dark:text-[var(--accent-secondary)] hover:bg-[var(--accent-primary)] hover:text-white transition-colors">
+                <FiUser className="mr-1.5" /> Register
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );

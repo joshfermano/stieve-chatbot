@@ -1,4 +1,4 @@
-import { FiX, FiAlertTriangle } from 'react-icons/fi';
+import { FiX, FiTrash2 } from 'react-icons/fi';
 
 interface ClearConfirmationDialogProps {
   isOpen: boolean;
@@ -14,32 +14,31 @@ const ClearConfirmationDialog = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div className="bg-[var(--card-bg)] rounded-xl p-6 max-w-md w-full mx-4 relative shadow-lg border border-[var(--border-color)]">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-          <FiX size={24} />
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors">
+          <FiX size={18} />
         </button>
 
-        <div className="flex items-center justify-center text-amber-500 mb-4">
-          <FiAlertTriangle size={36} />
-        </div>
-
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+        <div className="flex flex-col items-center justify-center mb-5">
+          <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mb-4">
+            <FiTrash2 size={24} className="text-red-600 dark:text-red-300" />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
             Clear conversation?
           </h2>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-600 dark:text-gray-400 text-center">
             This will delete all messages in your current conversation. This
             action cannot be undone.
           </p>
         </div>
 
-        <div className="flex justify-center space-x-4">
+        <div className="flex justify-center space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+            className="px-5 py-2.5 rounded-full border border-[var(--border-color)] text-sm font-medium text-[var(--text-primary)] bg-transparent hover:bg-[var(--sidebar-bg)] transition-colors">
             Cancel
           </button>
           <button
@@ -47,8 +46,8 @@ const ClearConfirmationDialog = ({
               onConfirm();
               onClose();
             }}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
-            Clear
+            className="px-5 py-2.5 rounded-full text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">
+            Clear Conversation
           </button>
         </div>
       </div>
