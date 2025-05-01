@@ -75,20 +75,18 @@ const MarkdownComponents = {
   ),
 };
 
-// Function to automatically format important information in the text
 const enhanceImportantInfo = (content: string): string => {
-  // First, let's convert raw URLs to proper markdown links
-  let enhancedContent = content
-    // Convert URLs to proper markdown links
-    .replace(/(?<!\[)(?<!\()(https?:\/\/[^\s]+)(?!\))/g, (match: string) => {
-      // Extract the final part of the URL for a display text
+  let enhancedContent = content.replace(
+    /(?<!\[)(?<!\()(https?:\/\/[^\s]+)(?!\))/g,
+    (match: string) => {
       let displayText = match.replace(/^https?:\/\/(www\.)?/, '');
       // Trim long URLs for display
       if (displayText.length > 30) {
         displayText = displayText.substring(0, 30) + '...';
       }
       return `[${displayText}](${match})`;
-    });
+    }
+  );
 
   // Special handling for m.me links
   enhancedContent = enhancedContent.replace(
