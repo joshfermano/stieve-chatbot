@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -16,26 +7,24 @@ exports.sendMessage = void 0;
 const gemini_1 = require("../config/gemini");
 const gemini_2 = require("../config/gemini");
 const Conversation_1 = __importDefault(require("../models/Conversation"));
-function generateResponse(message) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const result = yield gemini_2.model.generateContent(message);
-            const response = yield result.response;
-            return response.text();
-        }
-        catch (error) {
-            console.error('Error generating AI response:', error);
-            throw new Error('Failed to generate response');
-        }
-    });
+async function generateResponse(message) {
+    try {
+        const result = await gemini_2.model.generateContent(message);
+        const response = await result.response;
+        return response.text();
+    }
+    catch (error) {
+        console.error('Error generating AI response:', error);
+        throw new Error('Failed to generate response');
+    }
 }
-const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const sendMessage = async (req, res) => {
     try {
         const { message, conversationId } = req.body;
         // Handle guest mode
         if (conversationId === 'guest') {
             try {
-                const text = yield (0, gemini_1.generateSafeResponse)(message);
+                const text = await (0, gemini_1.generateSafeResponse)(message);
                 res.json({
                     response: text,
                     conversationId: 'guest',
@@ -56,7 +45,7 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             res.status(401).json({ message: 'Unauthorized' });
             return;
         }
-        let conversation = yield Conversation_1.default.findOne({
+        let conversation = await Conversation_1.default.findOne({
             _id: conversationId,
             userId: req.user.id,
         });
@@ -75,12 +64,12 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             content: message,
         });
         // Generate and add AI response
-        const text = yield (0, gemini_1.generateSafeResponse)(message);
+        const text = await (0, gemini_1.generateSafeResponse)(message);
         conversation.messages.push({
             role: 'model',
             content: text,
         });
-        yield conversation.save();
+        await conversation.save();
         res.json({
             response: text,
             title: conversation.title,
@@ -94,5 +83,5 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             success: false,
         });
     }
-});
+};
 exports.sendMessage = sendMessage;

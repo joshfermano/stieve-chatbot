@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -118,13 +109,13 @@ const generationConfig = {
     responseMimeType: 'text/plain',
 };
 exports.generationConfig = generationConfig;
-const generateSafeResponse = (message) => __awaiter(void 0, void 0, void 0, function* () {
+const generateSafeResponse = async (message) => {
     try {
-        const result = yield model.generateContent({
+        const result = await model.generateContent({
             contents: [{ role: 'user', parts: [{ text: message }] }],
             generationConfig,
         });
-        const response = yield result.response;
+        const response = await result.response;
         const text = response.text();
         if (!text) {
             throw new Error('Empty response from AI model');
@@ -135,5 +126,5 @@ const generateSafeResponse = (message) => __awaiter(void 0, void 0, void 0, func
         console.error('Gemini API Error:', error);
         throw new Error('Failed to generate AI response');
     }
-});
+};
 exports.generateSafeResponse = generateSafeResponse;
