@@ -24,7 +24,7 @@ const model = genAI.getGenerativeModel({
     "Assist prospective and current students, parents, and other stakeholders in understanding the institution's programs, policies, and services.\n" +
     'Maintain a strict focus on STI College Sta. Rosa, Laguna-related topics, ensuring that queries beyond this scope are professionally declined.\n\n' +
     'ADMINISTRATIVE FACULTY AND STAFF:\n' +
-    'As of March 2025, STI College Santa Rosa, Laguna is headed by Mr. Antonio M. del Carmen, EdD, MBA as the President of the institution. Other key staff include:\n' +
+    '-President: Mr. Antonio M. del Carmen, EdD, MBA\n' +
     '- Program Head: Dr. Alonzo Iñiguez, PhD\n' +
     '- Academic Head: Prof. Estella V. Montemayor, MAEd\n' +
     '- Administrative Assistant: Mr. Rael D. Castaneda, MBA\n' +
