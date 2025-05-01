@@ -1,108 +1,105 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { Request, Response, NextFunction } from 'express';
 import User from '../models/Users';
+import jwt from 'jsonwebtoken';
+import { Request, Response } from 'express';
 import 'dotenv/config';
 
-interface RegisterRequestBody {
-  username: string;
-  email: string;
-  password: string;
-}
-
-interface LoginRequestBody {
-  email: string;
-  password: string;
-}
-
-const getCookieOptions = () => {
-  const cookieOptions: any = {
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-    sameSite: 'lax',
+interface RegisterRequest extends Request {
+  body: {
+    username: string;
+    email: string;
+    password: string;
   };
+}
 
-  if (process.env.NODE_ENV === 'production') {
-    cookieOptions.secure = true;
-  }
+interface LoginRequest extends Request {
+  body: {
+    email: string;
+    password: string;
+  };
+}
 
-  return cookieOptions;
+// Get cookie settings based on environment
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
+    path: '/',
+  } as const;
 };
 
-export const register = async (req: Request, res: Response) => {
-  try {
-    const { username, email, password } = req.body as RegisterRequestBody;
+export const register = async (req: RegisterRequest, res: Response) => {
+  const { username, email, password } = req.body;
 
+  try {
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const isUserExists = await User.findOne({ $or: [{ username }, { email }] });
+    if (isUserExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
-    const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-    });
+    // Create new user
+    const user = await User.create({ username, email, password });
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, username: user.username },
-      process.env.ACCESS_TOKEN_SECRET || '',
-      {
-        expiresIn: '7d',
-      }
+      { id: user._id, username: user.username, email: user.email },
+      process.env.ACCESS_TOKEN_SECRET || 'fallback_secret',
+      { expiresIn: '1d' }
     );
 
+    // Set token in HTTP-only cookie
     res.cookie('token', token, getCookieOptions());
 
-    // Send response
+    // Return user info (without sensitive data)
     res.status(201).json({
-      id: user._id,
-      username: user.username,
-      email: user.email,
+      message: 'User registered successfully',
+      user: {
+        username: user.username,
+        email: user.email,
+      },
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Failed to register user' });
   }
 };
 
-export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body as LoginRequestBody;
+export const login = async (req: LoginRequest, res: Response) => {
+  const { email, password } = req.body;
 
-    // Find user
+  try {
+    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' }); // Better security to use generic message
     }
 
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    // Check if password is correct
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, username: user.username },
-      process.env.ACCESS_TOKEN_SECRET || '',
-      { expiresIn: '7d' }
+      { id: user._id, username: user.username, email: user.email },
+      process.env.ACCESS_TOKEN_SECRET || 'fallback_secret',
+      { expiresIn: '1d' }
     );
 
+    // Set token in HTTP-only cookie
     res.cookie('token', token, getCookieOptions());
 
-    // Send response
+    // Return user info
     res.status(200).json({
-      id: user._id,
-      username: user.username,
-      email: user.email,
+      message: 'Login successful',
+      user: {
+        username: user.username,
+        email: user.email,
+      },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -110,33 +107,38 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const logout = (req: Request, res: Response) => {
+export const logout = async (req: Request, res: Response) => {
   try {
+    // Clear the auth cookie
     res.clearCookie('token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      ...getCookieOptions(),
+      maxAge: 0,
     });
 
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
+    console.error('Logout error:', error);
     res.status(500).json({ message: 'Failed to logout' });
   }
 };
 
 export const verifyToken = async (req: Request, res: Response) => {
   try {
-    // User should be attached by auth middleware
-    if (!req.user) {
+    // The user data is attached to req by the authenticate middleware
+    const user = (req as any).user;
+
+    if (!user) {
       return res.status(401).json({ message: 'Authentication failed' });
     }
 
-    // Send the user data
+    // Return user data with the response
     res.status(200).json({
-      user: req.user,
-      authenticated: true,
+      username: user.username,
+      email: user.email,
+      valid: true,
     });
   } catch (error) {
+    console.error('Error verifying token:', error);
     res.status(401).json({ message: 'Authentication failed' });
   }
 };

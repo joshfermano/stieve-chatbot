@@ -2,11 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.errorHandler = void 0;
 const errorHandler = (err, req, res, next) => {
+    console.error(err.stack);
     res.status(500).json({
-        message: 'Server error',
-        error: process.env.NODE_ENV === 'development'
-            ? err.message
-            : 'Internal server error',
+        message: 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err.message : {},
     });
 };
 exports.errorHandler = errorHandler;

@@ -26,8 +26,8 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const app = (0, express_1.default)();
 const allowedOrigins = [
     'https://stieve-chatbot.vercel.app',
-    'https://stieve-chatbot-git-main-josh-khovick-fermanos-projects.vercel.app',
-    'https://stieve-chatbot-im374hg6x-josh-khovick-fermanos-projects.vercel.app',
+    'stieve-chatbot-git-main-josh-khovick-fermanos-projects.vercel.app',
+    'https://vercel.com/josh-khovick-fermanos-projects/stieve-chatbot/7qCKVYux79HZ6pYDQMBAsmG2p5Z9',
     CLIENT_URL,
     'http://localhost:5173',
 ];

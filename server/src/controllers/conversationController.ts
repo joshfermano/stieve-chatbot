@@ -3,102 +3,97 @@ import Conversation from '../models/Conversation';
 
 export const getConversations = async (req: Request, res: Response) => {
   try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
+    const userId = (req as any).user.id;
 
-    const conversations = await Conversation.find({ userId: req.user.id })
-      .select('_id title createdAt updatedAt')
-      .sort({ updatedAt: -1 });
+    const conversations = await Conversation.find({ userId })
+      .sort({ updatedAt: -1 })
+      .select('title createdAt updatedAt')
+      .lean();
 
-    return res.json(conversations);
+    const formattedConversations = conversations.map((conv) => ({
+      id: conv._id.toString(),
+      title: conv.title,
+      timestamp: conv.updatedAt || conv.createdAt,
+    }));
+
+    res.json(formattedConversations);
   } catch (error) {
     console.error('Error fetching conversations:', error);
-    return res.status(500).json({ message: 'Failed to fetch conversations' });
+    res.status(500).json({ message: 'Failed to fetch conversations' });
   }
 };
 
-/**
- * Create a new conversation
- */
 export const createConversation = async (req: Request, res: Response) => {
   try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
+    const userId = (req as any).user.id;
+    const { title } = req.body;
 
-    const { title } = req.body as { title: string };
+    console.log(
+      'Creating conversation for user:',
+      userId,
+      'with title:',
+      title
+    );
 
     const conversation = await Conversation.create({
-      title: title || 'New Conversation',
-      userId: req.user.id,
+      userId,
+      title: title || 'New Chat',
       messages: [],
     });
 
-    return res.status(201).json({
-      _id: conversation._id,
+    console.log('Conversation created:', conversation._id);
+
+    res.status(201).json({
+      id: conversation._id.toString(),
       title: conversation.title,
-      createdAt: conversation.createdAt,
-      updatedAt: conversation.updatedAt,
+      timestamp: conversation.createdAt,
     });
   } catch (error) {
     console.error('Error creating conversation:', error);
-    return res.status(500).json({ message: 'Failed to create conversation' });
+    res.status(500).json({ message: 'Failed to create conversation' });
   }
 };
 
-/**
- * Get messages for a specific conversation
- */
 export const getConversationMessages = async (req: Request, res: Response) => {
   try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
+    const userId = (req as any).user.id;
     const { id } = req.params;
 
     const conversation = await Conversation.findOne({
       _id: id,
-      userId: req.user.id,
+      userId,
     });
 
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
 
-    return res.json({ messages: conversation.messages });
+    res.json({ messages: conversation.messages });
   } catch (error) {
     console.error('Error fetching conversation messages:', error);
-    return res
-      .status(500)
-      .json({ message: 'Failed to fetch conversation messages' });
+    res.status(500).json({ message: 'Failed to fetch conversation messages' });
   }
 };
 
-/**
- * Delete a conversation
- */
 export const deleteConversation = async (req: Request, res: Response) => {
   try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
+    const userId = (req as any).user.id;
     const { id } = req.params;
 
-    const result = await Conversation.deleteOne({
+    console.log('Deleting conversation:', id, 'for user:', userId);
+
+    const conversation = await Conversation.findOneAndDelete({
       _id: id,
-      userId: req.user.id,
+      userId,
     });
 
-    if (result.deletedCount === 0) {
+    if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
 
-    return res.json({ message: 'Conversation deleted successfully' });
+    res.json({ message: 'Conversation deleted successfully' });
   } catch (error) {
     console.error('Error deleting conversation:', error);
-    return res.status(500).json({ message: 'Failed to delete conversation' });
+    res.status(500).json({ message: 'Failed to delete conversation' });
   }
 };

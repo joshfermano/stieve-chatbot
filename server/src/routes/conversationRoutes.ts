@@ -1,21 +1,20 @@
-import { Router } from 'express';
+import express, { RequestHandler } from 'express';
+import { authenticate } from '../middlewares/authMiddleware';
 import {
   getConversations,
   createConversation,
   deleteConversation,
   getConversationMessages,
 } from '../controllers/conversationController';
-import { authenticate } from '../middlewares/authMiddleware';
 
-const router = Router();
+const router = express.Router();
 
-// Apply authentication middleware to all conversation routes
-router.use(authenticate);
+// All conversation routes require authentication
+router.use(authenticate as RequestHandler);
 
-// Conversation routes
-router.get('/', getConversations);
-router.post('/', createConversation);
-router.delete('/:id', deleteConversation);
-router.get('/:id/messages', getConversationMessages);
+router.get('/', getConversations as RequestHandler);
+router.post('/', createConversation as RequestHandler);
+router.delete('/:id', deleteConversation as RequestHandler);
+router.get('/:id/messages', getConversationMessages as RequestHandler);
 
 export default router;

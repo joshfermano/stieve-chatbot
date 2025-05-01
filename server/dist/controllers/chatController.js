@@ -13,72 +13,84 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendMessage = void 0;
-const generative_ai_1 = require("@google/generative-ai");
+const gemini_1 = require("../config/gemini");
+const gemini_2 = require("../config/gemini");
 const Conversation_1 = __importDefault(require("../models/Conversation"));
-require("dotenv/config");
-const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+function generateResponse(message) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const result = yield gemini_2.model.generateContent(message);
+            const response = yield result.response;
+            return response.text();
+        }
+        catch (error) {
+            console.error('Error generating AI response:', error);
+            throw new Error('Failed to generate response');
+        }
+    });
+}
 const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     try {
         const { message, conversationId } = req.body;
-        // Generate AI response
-        try {
-            const result = yield model.generateContent(message);
-            const text = result.response.text();
-            // If no conversation ID or user ID, just return the response
-            if (!conversationId || !((_a = req.user) === null || _a === void 0 ? void 0 : _a.id)) {
-                return res.json({
+        // Handle guest mode
+        if (conversationId === 'guest') {
+            try {
+                const text = yield (0, gemini_1.generateSafeResponse)(message);
+                res.json({
                     response: text,
+                    conversationId: 'guest',
                     success: true,
                 });
             }
-            // Otherwise, try to save to existing conversation
+            catch (error) {
+                console.error('Error in guest chat:', error);
+                res.status(500).json({
+                    message: 'Failed to generate response',
+                    success: false,
+                });
+            }
+            return;
         }
-        catch (aiError) {
-            console.error('AI generation error:', aiError);
-            return res.status(500).json({
-                message: 'Failed to generate AI response',
-                success: false,
-            });
-        }
-        // Get or create conversation
+        // For authenticated users
         if (!req.user || !req.user.id) {
-            return res.status(401).json({ message: 'Unauthorized' });
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
         }
-        // Try to find the conversation
-        const conversation = yield Conversation_1.default.findOne({
+        let conversation = yield Conversation_1.default.findOne({
             _id: conversationId,
             userId: req.user.id,
         });
         if (!conversation) {
-            return res.status(404).json({ message: 'Conversation not found' });
+            res.status(404).json({ message: 'Conversation not found' });
+            return;
         }
-        // Generate AI response
-        const result = yield model.generateContent(message);
-        const text = result.response.text();
-        // Save the user message and AI response to the conversation
+        // Update conversation title for first message
+        if (conversation.messages.length === 0) {
+            conversation.title =
+                message.length > 50 ? `${message.slice(0, 50)}...` : message;
+        }
+        // Add user message
         conversation.messages.push({
             role: 'user',
             content: message,
-            timestamp: new Date(),
-        }, {
-            role: 'assistant',
+        });
+        // Generate and add AI response
+        const text = yield (0, gemini_1.generateSafeResponse)(message);
+        conversation.messages.push({
+            role: 'model',
             content: text,
-            timestamp: new Date(),
         });
         yield conversation.save();
-        // Return the AI response
-        return res.json({
+        res.json({
             response: text,
-            success: true,
+            title: conversation.title,
             conversationId: conversation._id,
         });
     }
     catch (error) {
-        console.error('Chat controller error:', error);
-        return res.status(500).json({
-            message: 'Failed to process chat message',
+        console.error('Error in sendMessage:', error);
+        res.status(500).json({
+            message: 'Failed to process message',
             success: false,
         });
     }

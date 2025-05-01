@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { RequestHandler } from 'express';
 import {
   register,
   login,
@@ -7,12 +7,15 @@ import {
 } from '../controllers/authController';
 import { authenticate } from '../middlewares/authMiddleware';
 
-const router = Router();
+const router = express.Router();
 
-// Auth routes
-router.post('/register', register);
-router.post('/login', login);
-router.get('/verify', authenticate, verifyToken);
-router.post('/logout', logout);
+router.post('/register', register as RequestHandler);
+router.post('/login', login as RequestHandler);
+router.get(
+  '/verify',
+  authenticate as RequestHandler,
+  verifyToken as RequestHandler
+);
+router.post('/logout', logout as RequestHandler);
 
 export default router;

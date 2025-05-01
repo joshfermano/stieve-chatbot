@@ -1,43 +1,35 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import 'dotenv/config';
 
-export const optionalAuth = (
+interface JwtPayload {
+  id: string;
+  username: string;
+  email: string;
+}
+
+export const optionalAuth = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // Get token from cookies
-    const token = req.cookies?.token;
+    const token = req.cookies.token;
 
     if (!token) {
+      // Allow request to continue without authentication
       return next();
     }
 
-    // Verify token
-    try {
-      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || '');
+    const decoded = jwt.verify(
+      token,
+      process.env.ACCESS_TOKEN_SECRET || 'fallback_secret'
+    ) as JwtPayload;
 
-      // Attach user data to request
-      req.user = decoded as jwt.JwtPayload;
-    } catch (jwtError) {
-      // In case of invalid token, clear it but continue
-      if (
-        jwtError instanceof jwt.TokenExpiredError ||
-        jwtError instanceof jwt.JsonWebTokenError
-      ) {
-        res.clearCookie('token', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-        });
-      }
-    }
-
+    req.user = decoded;
     next();
   } catch (error) {
-    console.error('Optional auth middleware error:', error);
+    // Even if token is invalid, allow request to continue
+    console.error('Optional auth error:', error);
     next();
   }
 };

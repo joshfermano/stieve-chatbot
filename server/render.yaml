@@ -1,9 +1,11 @@
 services:
   - type: web
-    name: rainier-chatbot-api
+    name: perps-chatbot-api
     env: node
-    buildCommand: npm run render-deploy
-    startCommand: npm start
+    buildCommand: npm install && npm run build
+    startCommand: node dist/app.js
+    region: singapore
+    plan: free
     envVars:
       - key: NODE_ENV
         value: production

@@ -1,4 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5500';
 
 // Makes a fetch request with authentication credentials
 export const fetchWithAuth = async (
@@ -20,7 +20,6 @@ export const fetchWithAuth = async (
   } catch (error) {
     console.error(`Error fetching ${endpoint}:`, error);
 
-    // Create a custom response for network/CORS errors
     if (
       error instanceof TypeError &&
       error.message.includes('Failed to fetch')
