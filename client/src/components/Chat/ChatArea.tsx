@@ -76,12 +76,10 @@ const MarkdownComponents = {
 };
 
 const enhanceImportantInfo = (content: string): string => {
-  // First, clean up any malformed asterisks or double asterisks in the original content
   let enhancedContent = content
     .replace(/\*\*\*\*/g, '**')
     .replace(/\*\*\s*\*\*/g, '**');
 
-  // Fix colored role titles with incorrect bold formatting
   enhancedContent = enhancedContent.replace(
     /<span[^>]*>(President|Program Head|Academic Head|Administrative Assistant|Compliance Officer)<\/span>:\s*\*\*\s*(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Atty\.)/gi,
     (match) => {
@@ -89,12 +87,10 @@ const enhanceImportantInfo = (content: string): string => {
     }
   );
 
-  // Convert URLs to markdown links
   enhancedContent = enhancedContent.replace(
     /(?<!\[)(?<!\()(https?:\/\/[^\s]+)(?!\))/g,
     (match: string) => {
       let displayText = match.replace(/^https?:\/\/(www\.)?/, '');
-      // Trim long URLs for display
       if (displayText.length > 30) {
         displayText = displayText.substring(0, 30) + '...';
       }
